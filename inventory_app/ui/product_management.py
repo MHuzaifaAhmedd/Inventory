@@ -111,7 +111,7 @@ class ProductManagementFrame:
         sku_frame = tk.Frame(row1, bg=self.secondary_color)
         sku_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True)
 
-        tk.Label(sku_frame, text="SKU/Barcode:", font=("Arial", 10),
+        tk.Label(sku_frame, text="SKU/QR Code:", font=("Arial", 10),
                 fg=self.text_color, bg=self.secondary_color, anchor=tk.W).pack(fill=tk.X)
         self.sku_entry = tk.Entry(sku_frame, font=("Arial", 10))
         self.sku_entry.pack(fill=tk.X, pady=(2, 0))
@@ -223,7 +223,7 @@ class ProductManagementFrame:
         select_hint.pack(side=tk.RIGHT, padx=(20, 0))
 
         # Create Treeview
-        columns = ("ID", "Name", "SKU", "Barcode", "Category", "COGS", "Stock")
+        columns = ("ID", "Name", "SKU", "QR Code", "Category", "COGS", "Stock")
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)
 
         # Configure columns
@@ -312,6 +312,19 @@ class ProductManagementFrame:
         )
         self.refresh_btn.pack(side=tk.LEFT, padx=(0, 10))
 
+        self.generate_qr_btn = tk.Button(
+            right_frame,
+            text="🔲 Generate QR Codes",
+            font=("Arial", 9),
+            fg=self.secondary_color,
+            bg="#17a2b8",
+            relief=tk.FLAT,
+            padx=10,
+            pady=8,
+            command=self.generate_all_qr_codes
+        )
+        self.generate_qr_btn.pack(side=tk.LEFT, padx=(0, 10))
+
         # Database reset button (for development/testing)
         self.reset_btn = tk.Button(
             right_frame,
@@ -351,7 +364,7 @@ class ProductManagementFrame:
                     product[0],  # ID
                     product[1],  # Name
                     product[2] or "",  # SKU
-                    product[3] or "",  # Barcode
+                    product[3] or "",  # QR Code
                     product[4],  # Category
                     cogs_formatted,  # COGS
                     product[6]   # Stock
@@ -364,8 +377,7 @@ class ProductManagementFrame:
         """Validate product form data"""
         name = self.name_entry.get().strip()
         sku = self.sku_entry.get().strip()
-        barcode = getattr(self, 'barcode_entry', None)
-        barcode = barcode.get().strip() if barcode else ""
+        qr_code = self.sku_entry.get().strip()  # Using SKU field for QR code
         category = self.category_combo.get()
         cogs_text = self.cogs_entry.get().strip()
         stock_text = self.stock_entry.get().strip()
@@ -399,7 +411,7 @@ class ProductManagementFrame:
         return {
             'name': name,
             'sku': sku,
-            'barcode': barcode,
+            'qr_code': qr_code,
             'category': category,
             'cogs': cogs,
             'stock': stock
@@ -425,40 +437,40 @@ class ProductManagementFrame:
             return
 
         try:
-            # Auto-generate SKU/Barcode if not provided
+            # Auto-generate SKU/QR Code if not provided
             sku = data['sku']
-            barcode = data.get('barcode', '')
-            
+            qr_code = data['qr_code']
+
             if not sku or sku.strip() == "":
                 # Auto-generate SKU
                 sku = self.generate_sku(data['name'], category_name)
                 print(f"Auto-generated SKU: {sku}")
-            
-            if not barcode or barcode.strip() == "":
-                # Auto-generate barcode
-                barcode = self.generate_barcode(data['name'], category_name)
-                print(f"Auto-generated Barcode: {barcode}")
+
+            if not qr_code or qr_code.strip() == "":
+                # Auto-generate QR code
+                qr_code = self.generate_qr_code(data['name'], category_name)
+                print(f"Auto-generated QR Code: {qr_code}")
 
             success = self.db_manager.add_product(
                 data['name'],
                 sku,
-                barcode,
+                qr_code,
                 category_id,
                 data['cogs'],
                 data['stock']
             )
 
             if success:
-                messagebox.showinfo("Success", 
+                messagebox.showinfo("Success",
                     f"Product added successfully!\n\n"
                     f"Product: {data['name']}\n"
                     f"SKU: {sku}\n"
-                    f"Barcode: {barcode}\n"
+                    f"QR Code: {qr_code}\n"
                     f"Category: {category_name}")
                 self.clear_form()
                 self.load_products()
             else:
-                messagebox.showerror("Error", "Failed to add product. SKU/Barcode may already exist.")
+                messagebox.showerror("Error", "Failed to add product. SKU/QR Code may already exist.")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add product: {e}")
@@ -492,30 +504,22 @@ class ProductManagementFrame:
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             return f"PROD-{timestamp}"
     
-    def generate_barcode(self, product_name, category_name):
-        """Generate unique barcode for product"""
+    def generate_qr_code(self, product_name, category_name):
+        """Generate unique QR code for product"""
         try:
-            import hashlib
-            from datetime import datetime
-            
-            # Create unique string from product name + category + timestamp
-            unique_string = f"{product_name}{category_name}{datetime.now().isoformat()}"
-            
-            # Generate hash
-            hash_obj = hashlib.md5(unique_string.encode())
-            hash_hex = hash_obj.hexdigest()[:8]
-            
-            # Convert to numeric and pad to 12 digits
-            barcode_num = str(int(hash_hex, 16))[:12].zfill(12)
-            
-            return barcode_num
-            
+            from utils.qr_generator import QRGenerator
+
+            qr_generator = QRGenerator(self.db_manager)
+            sku, qr_code = qr_generator.generate_sku_qr_code(product_name, category_name)
+
+            return qr_code
+
         except Exception as e:
-            print(f"Error generating barcode: {e}")
+            print(f"Error generating QR code: {e}")
             # Fallback to timestamp-based generation
             from datetime import datetime
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            return timestamp[:12].zfill(12)
+            return f"MONA-{timestamp}"
 
     def update_product(self):
         """Update selected product"""
@@ -542,7 +546,7 @@ class ProductManagementFrame:
                 self.selected_product[0],  # Product ID
                 data['name'],
                 data['sku'],
-                data['sku'],  # Using SKU as barcode for now
+                data['qr_code'],  # Using QR code
                 category_id,
                 data['cogs']
             )
@@ -552,7 +556,7 @@ class ProductManagementFrame:
                 self.clear_form()
                 self.load_products()
             else:
-                messagebox.showerror("Error", "Failed to update product. SKU/Barcode may already exist.")
+                messagebox.showerror("Error", "Failed to update product. SKU/QR Code may already exist.")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update product: {e}")
@@ -663,7 +667,7 @@ class ProductManagementFrame:
                 # Check if search term matches any field
                 if (search_term in str(product[1]).lower() or  # Name
                     search_term in str(product[2] or "").lower() or  # SKU
-                    search_term in str(product[3] or "").lower() or  # Barcode
+                    search_term in str(product[3] or "").lower() or  # QR Code
                     search_term in str(product[4]).lower()):  # Category
 
                     # Format COGS
@@ -710,6 +714,52 @@ class ProductManagementFrame:
 
             except Exception as e:
                 messagebox.showerror("Error", f"Database reset failed: {e}")
+
+    def generate_all_qr_codes(self):
+        """Generate QR codes for all products that don't have them"""
+        try:
+            from utils.qr_generator import QRGenerator
+
+            qr_generator = QRGenerator(self.db_manager)
+            products = self.db_manager.get_products()
+
+            updated_count = 0
+            for product in products:
+                product_id, name, sku, qr_code, category_id, cogs, current_stock = product[:7]
+
+                # Skip if QR code already exists
+                if qr_code and qr_code.strip():
+                    continue
+
+                # Get category name
+                category_name = ""
+                for cat in self.categories:
+                    if cat[0] == category_id:
+                        category_name = cat[1]
+                        break
+
+                # Generate new QR code
+                new_sku, new_qr_code = qr_generator.generate_sku_qr_code(name, category_name)
+
+                # Update database
+                success = self.db_manager.update_product_barcode(product_id, new_qr_code)
+                if success:
+                    updated_count += 1
+                    print(f"Generated QR code for {name}: {new_qr_code}")
+
+            if updated_count > 0:
+                messagebox.showinfo("Success",
+                    f"✅ Generated QR codes for {updated_count} products!\n\n"
+                    "All products now have QR codes that can be scanned.\n\n"
+                    "📷 Check the 'QR Scanner' tab to see the generated QR codes!")
+                self.load_products()  # Refresh the table
+            else:
+                messagebox.showinfo("Info", "All products already have QR codes!")
+
+        except ImportError:
+            messagebox.showerror("Error", "QR Generator not available")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to generate QR codes: {e}")
 
     def sort_column(self, col):
         """Sort table by column"""

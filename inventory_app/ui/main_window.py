@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from ui.product_management import ProductManagementFrame
 from ui.sales_management import SalesManagementFrame
 from ui.dashboard import DashboardFrame
-from ui.barcode_scanner import BarcodeScannerFrame
+from ui.qr_scanner import QRScannerFrame
 from database.db_manager import DatabaseManager
 
 class MainWindow:
@@ -87,7 +87,7 @@ class MainWindow:
             ("Dashboard", "dashboard", "📊"),
             ("Products", "products", "📦"),
             ("Sales", "sales", "💰"),
-            ("Barcode Scan", "barcode", "📱"),
+            ("QR Scanner", "barcode", "📱"),
         ]
 
         for text, frame_name, icon in nav_items:
@@ -132,7 +132,7 @@ class MainWindow:
             "dashboard": DashboardFrame(self.content_area, self.db_manager, self),
             "products": ProductManagementFrame(self.content_area, self.db_manager, self),
             "sales": SalesManagementFrame(self.content_area, self.db_manager, self),
-            "barcode": BarcodeScannerFrame(self.content_area, self.db_manager)
+            "barcode": QRScannerFrame(self.content_area, self.db_manager)
         }
 
     def show_frame(self, frame_name):
@@ -174,7 +174,7 @@ class MainWindow:
         self.root.bind('<Control-d>', lambda e: self.show_frame("dashboard"))
         self.root.bind('<Control-p>', lambda e: self.show_frame("products"))
         self.root.bind('<Control-s>', lambda e: self.show_frame("sales"))
-        self.root.bind('<Control-b>', lambda e: self.show_frame("barcode"))
+        self.root.bind('<Control-q>', lambda e: self.show_frame("barcode"))  # QR Scanner
         self.root.bind('<Escape>', lambda e: self.confirm_exit())
 
     def confirm_exit(self):
