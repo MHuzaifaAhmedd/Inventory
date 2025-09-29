@@ -36,6 +36,8 @@ class ProductManagementFrame:
         self.selected_product = None
         self.categories = []
         self.load_categories()
+        # Map of product_id -> full product tuple from DB (raw values)
+        self.products_by_id = {}
 
     def create_header(self):
         """Create header section"""
@@ -133,7 +135,7 @@ class ProductManagementFrame:
         cogs_frame = tk.Frame(row2, bg=self.secondary_color)
         cogs_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True)
 
-        tk.Label(cogs_frame, text="COGS (₹):", font=("Arial", 10),
+        tk.Label(cogs_frame, text="COGS (PKR):", font=("Arial", 10),
                 fg=self.text_color, bg=self.secondary_color, anchor=tk.W).pack(fill=tk.X)
         self.cogs_entry = tk.Entry(cogs_frame, font=("Arial", 10))
         self.cogs_entry.pack(fill=tk.X, pady=(2, 0))
@@ -230,7 +232,7 @@ class ProductManagementFrame:
         column_widths = [50, 200, 100, 150, 120, 80, 80]
         for col, width in zip(columns, column_widths):
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_column(c))
-            self.tree.column(col, width=width, anchor=tk.W)
+            self.tree.column(col, width=width, anchor=tk.CENTER)
 
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -355,10 +357,14 @@ class ProductManagementFrame:
 
         try:
             products = self.db_manager.get_products()
+            # refresh raw products map
+            self.products_by_id = {}
 
             for product in products:
                 # Format COGS
-                cogs_formatted = f"₹{product[5]:.2f}" if product[5] else "₹0.00"
+                cogs_formatted = f"PKR {product[5]:.2f}" if product[5] else "PKR 0.00"
+                # store raw tuple for later use when editing
+                self.products_by_id[product[0]] = product
 
                 self.tree.insert("", tk.END, values=(
                     product[0],  # ID
@@ -626,7 +632,36 @@ class ProductManagementFrame:
         selection = self.tree.selection()
         if selection:
             item = self.tree.item(selection[0])
-            self.selected_product = item['values']
+            values = item['values']
+            # values[0] is product ID from the table
+            try:
+                product_id = values[0]
+            except Exception:
+                product_id = None
+
+            # Prefer raw data from DB to avoid formatted strings (e.g., "PKR 100.00")
+            self.selected_product = self.products_by_id.get(product_id)
+
+            # Fallback: attempt to sanitize from table values if mapping missing
+            if not self.selected_product and values:
+                try:
+                    # Expected order: (ID, Name, SKU, QR, Category, COGS_FMT, Stock)
+                    cogs_text = str(values[5]) if len(values) > 5 else "0"
+                    import re as _re
+                    match = _re.search(r"([-+]?[0-9]*\.?[0-9]+)", cogs_text)
+                    cogs_val = float(match.group(1)) if match else 0.0
+                    stock_val = int(values[6]) if len(values) > 6 else 0
+                    self.selected_product = (
+                        values[0],            # id
+                        values[1],            # name
+                        values[2] or "",     # sku
+                        values[3] or "",     # qr_code
+                        values[4],            # category
+                        cogs_val,             # cogs (numeric)
+                        stock_val             # stock
+                    )
+                except Exception:
+                    self.selected_product = None
 
             # Enable action buttons with visual feedback
             self.edit_btn.config(state=tk.NORMAL, bg="#28a745")
@@ -662,6 +697,8 @@ class ProductManagementFrame:
 
         try:
             products = self.db_manager.get_products()
+            # refresh raw products map
+            self.products_by_id = {}
 
             for product in products:
                 # Check if search term matches any field
@@ -671,7 +708,9 @@ class ProductManagementFrame:
                     search_term in str(product[4]).lower()):  # Category
 
                     # Format COGS
-                    cogs_formatted = f"₹{product[5]:.2f}" if product[5] else "₹0.00"
+                    cogs_formatted = f"PKR {product[5]:.2f}" if product[5] else "PKR 0.00"
+                    # store raw tuple for later use when editing
+                    self.products_by_id[product[0]] = product
 
                     self.tree.insert("", tk.END, values=(
                         product[0], product[1], product[2] or "", product[3] or "",
@@ -695,20 +734,23 @@ class ProductManagementFrame:
                     messagebox.showerror("Error", "Invalid admin password")
                     return
 
-                # Reset database
+                # Reset database file
                 if os.path.exists("inventory.db"):
                     os.remove("inventory.db")
 
-                # Reinitialize database
+                # Reinitialize database schema
                 if self.db_manager.initialize_database():
                     messagebox.showinfo("Success",
                                       "✅ Database reset successfully!\n\n"
                                       "The application will restart with a clean database.\n\n"
                                       "You can now add your own products.")
 
-                    # Restart application
-                    self.main_window.root.destroy()
-                    os.system("python run.py")
+                    # Recreate UI frames so they bind to the reinitialized database
+                    try:
+                        self.main_window.recreate_frames()
+                    except Exception:
+                        # Fallback: reload product list in current frame
+                        self.load_products()
                 else:
                     messagebox.showerror("Error", "Failed to reset database")
 

@@ -16,7 +16,7 @@
    • SKU: "LEK-BASIC" (optional)
    • Barcode: "LEK001" (optional)
    • Category: "Lash o'clock"
-   • COGS: ₹150.00
+   • COGS: PKR 150.00
    • Stock: 25 units
 💾 Click "Add Product"
 ```
@@ -26,9 +26,9 @@
 💰 Go to Sales Tab
 📦 Select product from dropdown
 🔢 Enter quantity: 2
-💵 Enter selling price: ₹200.00
+💵 Enter selling price: PKR 200.00
 ✅ Click "Add Sale"
-📊 Profit calculated automatically: ₹100.00
+📊 Profit calculated automatically: PKR 100.00
 ```
 
 ### Step 4: Check Analytics

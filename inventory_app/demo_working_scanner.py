@@ -40,7 +40,7 @@ def demo_scanner_workflow():
     print("      SKU: LAS-EYESHADO-0829")
     print("      Stock: 90 units")
     print("      Category: Lash o'clock")
-    print("      COGS: ₹10000.00")
+    print("      COGS: PKR 10000.00")
     print()
     
     # Step 4: Quick actions

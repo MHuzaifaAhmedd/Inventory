@@ -116,7 +116,7 @@ class SalesManagementFrame:
         price_frame = tk.Frame(row2, bg=self.secondary_color)
         price_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
-        tk.Label(price_frame, text="Selling Price (₹):", font=("Arial", 10),
+        tk.Label(price_frame, text="Selling Price (PKR):", font=("Arial", 10),
                 fg=self.text_color, bg=self.secondary_color, anchor=tk.W).pack(fill=tk.X)
         self.price_entry = tk.Entry(price_frame, font=("Arial", 10))
         self.price_entry.pack(fill=tk.X, pady=(2, 0))
@@ -146,7 +146,7 @@ class SalesManagementFrame:
         revenue_frame = tk.Frame(row3, bg=self.secondary_color)
         revenue_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
-        tk.Label(revenue_frame, text="Revenue (₹):", font=("Arial", 10),
+        tk.Label(revenue_frame, text="Revenue (PKR):", font=("Arial", 10),
                 fg=self.text_color, bg=self.secondary_color, anchor=tk.W).pack(fill=tk.X)
         self.revenue_entry = tk.Entry(revenue_frame, font=("Arial", 10), state="readonly")
         self.revenue_entry.pack(fill=tk.X, pady=(2, 0))
@@ -155,7 +155,7 @@ class SalesManagementFrame:
         profit_frame = tk.Frame(row3, bg=self.secondary_color)
         profit_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True)
 
-        tk.Label(profit_frame, text="Profit (₹):", font=("Arial", 10),
+        tk.Label(profit_frame, text="Profit (PKR):", font=("Arial", 10),
                 fg=self.text_color, bg=self.secondary_color, anchor=tk.W).pack(fill=tk.X)
         self.profit_entry = tk.Entry(profit_frame, font=("Arial", 10), state="readonly")
         self.profit_entry.pack(fill=tk.X, pady=(2, 0))
@@ -218,7 +218,7 @@ class SalesManagementFrame:
         column_widths = [50, 150, 60, 80, 80, 80, 100, 120]
         for col, width in zip(columns, column_widths):
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_column(c))
-            self.tree.column(col, width=width, anchor=tk.W)
+            self.tree.column(col, width=width, anchor=tk.CENTER)
 
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -242,15 +242,31 @@ class SalesManagementFrame:
         date_frame = tk.Frame(filters_frame, bg=self.background_color)
         date_frame.pack(side=tk.LEFT)
 
-        tk.Label(date_frame, text="From:", font=("Arial", 9),
-                fg=self.text_color, bg=self.background_color).pack(side=tk.LEFT, padx=(0, 5))
-        self.from_date_entry = tk.Entry(date_frame, font=("Arial", 9), width=10)
-        self.from_date_entry.pack(side=tk.LEFT, padx=(0, 10))
+        # Date filter explanation
+        date_explanation = tk.Label(
+            date_frame, 
+            text="📅 Filter sales by date range:", 
+            font=("Arial", 9, "bold"),
+            fg=self.primary_color, 
+            bg=self.background_color
+        )
+        date_explanation.pack(side=tk.LEFT, padx=(0, 15))
 
-        tk.Label(date_frame, text="To:", font=("Arial", 9),
+        tk.Label(date_frame, text="From Date:", font=("Arial", 9),
                 fg=self.text_color, bg=self.background_color).pack(side=tk.LEFT, padx=(0, 5))
-        self.to_date_entry = tk.Entry(date_frame, font=("Arial", 9), width=10)
+        self.from_date_entry = tk.Entry(date_frame, font=("Arial", 9), width=12)
+        self.from_date_entry.pack(side=tk.LEFT, padx=(0, 5))
+        self.from_date_entry.insert(0, "YYYY-MM-DD")
+        self.from_date_entry.bind('<FocusIn>', lambda e: self.clear_placeholder(self.from_date_entry, "YYYY-MM-DD"))
+        self.from_date_entry.bind('<FocusOut>', lambda e: self.restore_placeholder(self.from_date_entry, "YYYY-MM-DD"))
+
+        tk.Label(date_frame, text="To Date:", font=("Arial", 9),
+                fg=self.text_color, bg=self.background_color).pack(side=tk.LEFT, padx=(0, 5))
+        self.to_date_entry = tk.Entry(date_frame, font=("Arial", 9), width=12)
         self.to_date_entry.pack(side=tk.LEFT, padx=(0, 10))
+        self.to_date_entry.insert(0, "YYYY-MM-DD")
+        self.to_date_entry.bind('<FocusIn>', lambda e: self.clear_placeholder(self.to_date_entry, "YYYY-MM-DD"))
+        self.to_date_entry.bind('<FocusOut>', lambda e: self.restore_placeholder(self.to_date_entry, "YYYY-MM-DD"))
 
         # Category filter
         category_frame = tk.Frame(filters_frame, bg=self.background_color)
@@ -323,6 +339,18 @@ class SalesManagementFrame:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load products: {e}")
 
+    def clear_placeholder(self, entry, placeholder):
+        """Clear placeholder text when entry gets focus"""
+        if entry.get() == placeholder:
+            entry.delete(0, tk.END)
+            entry.config(fg=self.text_color)
+
+    def restore_placeholder(self, entry, placeholder):
+        """Restore placeholder text if entry is empty"""
+        if not entry.get().strip():
+            entry.insert(0, placeholder)
+            entry.config(fg="gray")
+
     def load_sales(self):
         """Load sales into table"""
         # Clear existing items
@@ -334,6 +362,12 @@ class SalesManagementFrame:
             from_date = self.from_date_entry.get().strip()
             to_date = self.to_date_entry.get().strip()
             category_name = self.category_filter_combo.get()
+
+            # Handle placeholder text
+            if from_date == "YYYY-MM-DD":
+                from_date = ""
+            if to_date == "YYYY-MM-DD":
+                to_date = ""
 
             # Get category ID if specific category selected
             category_id = None
@@ -350,9 +384,9 @@ class SalesManagementFrame:
 
             for sale in sales:
                 # Format values
-                sell_price = f"₹{sale[3]:.2f}"
-                revenue = f"₹{sale[4]:.2f}"
-                profit = f"₹{sale[5]:.2f}"
+                sell_price = f"PKR {sale[3]:.2f}"
+                revenue = f"PKR {sale[4]:.2f}"
+                profit = f"PKR {sale[5]:.2f}"
 
                 self.tree.insert("", tk.END, values=(
                     sale[0],   # ID
@@ -595,7 +629,13 @@ class SalesManagementFrame:
     def clear_filters(self):
         """Clear all filters"""
         self.from_date_entry.delete(0, tk.END)
+        self.from_date_entry.insert(0, "YYYY-MM-DD")
+        self.from_date_entry.config(fg="gray")
+        
         self.to_date_entry.delete(0, tk.END)
+        self.to_date_entry.insert(0, "YYYY-MM-DD")
+        self.to_date_entry.config(fg="gray")
+        
         self.category_filter_combo.set("All Categories")
         self.load_sales()
 

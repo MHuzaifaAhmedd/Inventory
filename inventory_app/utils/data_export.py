@@ -116,8 +116,8 @@ class DataExporter:
                 writer.writerow(["SUMMARY"])
                 writer.writerow(["Total Products", stats.get('total_products', 0)])
                 writer.writerow(["Total Stock", stats.get('total_stock', 0)])
-                writer.writerow(["Total Revenue", f"₹{stats.get('total_revenue', 0):.2f}"])
-                writer.writerow(["Total Profit", f"₹{stats.get('total_profit', 0):.2f}"])
+                writer.writerow(["Total Revenue", f"PKR {stats.get('total_revenue', 0):.2f}"])
+                writer.writerow(["Total Profit", f"PKR {stats.get('total_profit', 0):.2f}"])
                 writer.writerow([])
 
                 # Write products by category
@@ -136,7 +136,7 @@ class DataExporter:
                     writer.writerow([
                         category,
                         data['count'],
-                        f"₹{data['stock_value']:.2f}"
+                        f"PKR {data['stock_value']:.2f}"
                     ])
 
                 writer.writerow([])
@@ -157,7 +157,7 @@ class DataExporter:
                         product[4],  # Category
                         product[5] or 0,  # COGS
                         product[6],  # Stock
-                        f"₹{stock_value:.2f}"  # Stock Value
+                        f"PKR {stock_value:.2f}"  # Stock Value
                     ])
 
             return filename
@@ -204,8 +204,8 @@ class DataExporter:
                 writer.writerow(["SALES SUMMARY"])
                 writer.writerow(["Total Sales", len(sales)])
                 writer.writerow(["Total Quantity Sold", total_quantity])
-                writer.writerow(["Total Revenue", f"₹{total_revenue:.2f}"])
-                writer.writerow(["Total Profit", f"₹{total_profit:.2f}"])
+                writer.writerow(["Total Revenue", f"PKR {total_revenue:.2f}"])
+                writer.writerow(["Total Profit", f"PKR {total_profit:.2f}"])
                 if total_revenue > 0:
                     writer.writerow(["Profit Margin", f"{(total_profit/total_revenue)*100:.1f}%"])
                 writer.writerow([])
@@ -217,7 +217,7 @@ class DataExporter:
                     writer.writerow([
                         product[0],
                         product[1],
-                        f"₹{product[2]:.2f}"
+                        f"PKR {product[2]:.2f}"
                     ])
                 writer.writerow([])
 
@@ -227,8 +227,8 @@ class DataExporter:
                 for cat in category_perf:
                     writer.writerow([
                         cat[0],
-                        f"₹{cat[1]:.2f}",
-                        f"₹{cat[2]:.2f}"
+                        f"PKR {cat[1]:.2f}",
+                        f"PKR {cat[2]:.2f}"
                     ])
                 writer.writerow([])
 

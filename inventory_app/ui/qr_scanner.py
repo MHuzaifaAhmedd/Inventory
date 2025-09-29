@@ -513,7 +513,7 @@ class QRScannerFrame(ttk.Frame):
             self.add_scan_result(f"   SKU: {sku or 'N/A'}")
             self.add_scan_result(f"   Stock: {current_stock} units")
             self.add_scan_result(f"   Category: {category_name}")
-            self.add_scan_result(f"   COGS: ₹{cogs:.2f}")
+            self.add_scan_result(f"   COGS: PKR {cogs:.2f}")
 
             # Store current product for operations
             self.current_product = product
@@ -736,7 +736,7 @@ class QRScannerFrame(ttk.Frame):
         
         ttk.Label(info_frame, text=f"Product: {name}").pack(anchor="w")
         ttk.Label(info_frame, text=f"Available Stock: {current_stock}").pack(anchor="w")
-        ttk.Label(info_frame, text=f"COGS: ₹{cogs:.2f}").pack(anchor="w")
+        ttk.Label(info_frame, text=f"COGS: PKR {cogs:.2f}").pack(anchor="w")
         
         # Sale controls
         sale_frame = ttk.LabelFrame(dialog, text="Sale Details", padding=10)
@@ -780,7 +780,7 @@ class QRScannerFrame(ttk.Frame):
                 success = self.db_manager.add_sale(product_id, quantity, selling_price, datetime.now().isoformat())
                 
                 if success:
-                    self.add_scan_result(f"✅ Sale recorded: {quantity} units @ ₹{selling_price:.2f}")
+                    self.add_scan_result(f"✅ Sale recorded: {quantity} units @ PKR {selling_price:.2f}")
                     dialog.destroy()
                 else:
                     messagebox.showerror("Error", "Failed to record sale")
@@ -1374,7 +1374,7 @@ class QRScannerFrame(ttk.Frame):
         ttk.Label(info_frame, text=f"Product: {product[1]}", 
                  font=("Arial", 10, "bold")).pack(anchor="w")
         ttk.Label(info_frame, text=f"Current Stock: {product[6]} units").pack(anchor="w")
-        ttk.Label(info_frame, text=f"COGS: ₹{product[5]:.2f}").pack(anchor="w")
+        ttk.Label(info_frame, text=f"COGS: PKR {product[5]:.2f}").pack(anchor="w")
         
         # Sale inputs
         sale_frame = ttk.LabelFrame(dialog, text="Sale Details", padding=10)
@@ -1387,7 +1387,7 @@ class QRScannerFrame(ttk.Frame):
         quantity_entry.grid(row=0, column=1, sticky="w", padx=10)
         
         # Selling Price
-        ttk.Label(sale_frame, text="Selling Price (₹):").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(sale_frame, text="Selling Price (PKR ):").grid(row=1, column=0, sticky="w", pady=5)
         price_var = tk.StringVar(value=str(product[5] * 1.5))  # Suggest 50% markup
         price_entry = ttk.Entry(sale_frame, textvariable=price_var, width=10)
         price_entry.grid(row=1, column=1, sticky="w", padx=10)
@@ -1402,7 +1402,7 @@ class QRScannerFrame(ttk.Frame):
                 price = float(price_var.get())
                 profit = qty * (price - product[5])
                 revenue = qty * price
-                profit_label.config(text=f"Revenue: ₹{revenue:.2f} | Profit: ₹{profit:.2f}")
+                profit_label.config(text=f"Revenue: PKR {revenue:.2f} | Profit: PKR {profit:.2f}")
             except:
                 profit_label.config(text="Invalid input")
         
@@ -1447,8 +1447,8 @@ class QRScannerFrame(ttk.Frame):
                     
                     self.add_scan_result(f"✅ SALE RECORDED")
                     self.add_scan_result(f"   Quantity: {quantity}")
-                    self.add_scan_result(f"   Revenue: ₹{revenue:.2f}")
-                    self.add_scan_result(f"   Profit: ₹{profit:.2f}")
+                    self.add_scan_result(f"   Revenue: PKR {revenue:.2f}")
+                    self.add_scan_result(f"   Profit: PKR {profit:.2f}")
                     self.add_scan_result(f"   Remaining Stock: {new_stock}")
                     
                     dialog.destroy()
@@ -1608,7 +1608,7 @@ class QRScannerFrame(ttk.Frame):
             category_combo.set(category_names[0])
         
         # COGS
-        ttk.Label(form_frame, text="COGS (₹):").grid(row=4, column=0, sticky="w", pady=5)
+        ttk.Label(form_frame, text="COGS (PKR ):").grid(row=4, column=0, sticky="w", pady=5)
         cogs_var = tk.StringVar()
         ttk.Entry(form_frame, textvariable=cogs_var, width=30).grid(row=4, column=1, sticky="ew", padx=10)
         

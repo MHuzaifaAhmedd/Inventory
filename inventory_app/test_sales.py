@@ -21,7 +21,7 @@ def test_database():
         print(f"✅ Found {len(products)} products in database:")
 
         for i, product in enumerate(products, 1):
-            print(f"  {i}. {product[1]} (ID: {product[0]}, Stock: {product[6]}, COGS: ₹{product[5]})")
+            print(f"  {i}. {product[1]} (ID: {product[0]}, Stock: {product[6]}, COGS: PKR {product[5]})")
 
         if len(products) == 0:
             print("❌ No products found! This is the issue.")
@@ -55,7 +55,7 @@ def test_sale_simulation():
         product = products[0]  # Use first product
         print(f"📦 Testing sale of: {product[1]}")
         print(f"   Stock before: {product[6]}")
-        print(f"   COGS: ₹{product[5]}")
+        print(f"   COGS: PKR {product[5]}")
 
         # Simulate a sale
         quantity = 1
@@ -65,8 +65,8 @@ def test_sale_simulation():
 
         if success:
             print("✅ Sale added successfully!")
-            print(f"   Revenue: ₹{selling_price:.2f}")
-            print(f"   Profit: ₹{selling_price - product[5]:.2f}")
+            print(f"   Revenue: PKR {selling_price:.2f}")
+            print(f"   Profit: PKR {selling_price - product[5]:.2f}")
 
             # Check updated stock
             updated_products = db.get_products()

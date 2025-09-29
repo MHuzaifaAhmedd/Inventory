@@ -202,7 +202,7 @@ def show_usage_instructions():
     print("   ✅ READY TO SCAN - Point camera at barcode!")
     print("   ✅ 🎯 BARCODE DETECTED: [barcode number]")
     print("   ✅ Scanning successful!")
-    print("   ✅ Found: [Product Name] - ₹[Price]")
+    print("   ✅ Found: [Product Name] - PKR [Price]")
 
 def main():
     """Main test function"""

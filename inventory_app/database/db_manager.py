@@ -421,7 +421,7 @@ class DatabaseManager:
 
             # Commit transaction
             self.connection.commit()
-            print(f"Successfully added sale: {quantity} x {selling_price} = ₹{revenue}")
+            print(f"Successfully added sale: {quantity} x {selling_price} = PKR {revenue}")
             return True
 
         except Exception as e:
@@ -486,30 +486,53 @@ class DatabaseManager:
             return False
 
         try:
+            # Start transaction
+            self.connection.execute('BEGIN EXCLUSIVE')
+
             # Get sale details
             self.cursor.execute('SELECT product_id, quantity FROM sales WHERE id=?', (sale_id,))
             result = self.cursor.fetchone()
             if not result:
+                self.connection.rollback()
                 return False
 
             product_id, quantity = result
 
+            # Get current stock
+            self.cursor.execute('SELECT current_stock FROM products WHERE id=?', (product_id,))
+            stock_result = self.cursor.fetchone()
+            if not stock_result:
+                self.connection.rollback()
+                return False
+
+            current_stock = stock_result[0]
+            new_stock = current_stock + quantity
+
             # Delete sale
             self.cursor.execute('DELETE FROM sales WHERE id=?', (sale_id,))
 
-            # Restore stock
-            self.update_stock(product_id, quantity, "stock_in")
+            # Restore stock by adding back the sold quantity
+            current_time = datetime.now().isoformat()
+            self.cursor.execute('''
+                UPDATE products 
+                SET current_stock = ?, updated_at = ?
+                WHERE id = ?
+            ''', (new_stock, current_time, product_id))
 
             self.connection.commit()
             return True
         except Exception as e:
             print(f"Error deleting sale: {e}")
+            try:
+                self.connection.rollback()
+            except:
+                pass
             return False
         finally:
             self.disconnect()
 
     # Analytics functions
-    def get_dashboard_stats(self):
+    def get_dashboard_stats(self, category_id=None):
         """Get dashboard statistics"""
         if not self.connect():
             return {}
@@ -517,24 +540,42 @@ class DatabaseManager:
         try:
             stats = {}
 
+            # Build WHERE clause for category filtering
+            where_clause = ""
+            params = []
+            if category_id:
+                where_clause = "WHERE p.category_id = ?"
+                params = [category_id]
+
             # Total products
-            self.cursor.execute('SELECT COUNT(*) FROM products')
+            if category_id:
+                self.cursor.execute(f'SELECT COUNT(*) FROM products p {where_clause}', params)
+            else:
+                self.cursor.execute('SELECT COUNT(*) FROM products')
             stats['total_products'] = self.cursor.fetchone()[0]
 
             # Total stock
-            self.cursor.execute('SELECT SUM(current_stock) FROM products')
+            if category_id:
+                self.cursor.execute(f'SELECT SUM(p.current_stock) FROM products p {where_clause}', params)
+            else:
+                self.cursor.execute('SELECT SUM(current_stock) FROM products')
             result = self.cursor.fetchone()[0]
             stats['total_stock'] = result if result else 0
 
-            # Total revenue
-            self.cursor.execute('SELECT SUM(revenue) FROM sales')
-            result = self.cursor.fetchone()[0]
-            stats['total_revenue'] = result if result else 0.0
-
-            # Total profit
-            self.cursor.execute('SELECT SUM(profit) FROM sales')
-            result = self.cursor.fetchone()[0]
-            stats['total_profit'] = result if result else 0.0
+            # Total revenue and profit (filtered by category if specified)
+            if category_id:
+                self.cursor.execute('''
+                    SELECT SUM(s.revenue), SUM(s.profit)
+                    FROM sales s
+                    JOIN products p ON s.product_id = p.id
+                    WHERE p.category_id = ?
+                ''', (category_id,))
+            else:
+                self.cursor.execute('SELECT SUM(revenue), SUM(profit) FROM sales')
+            
+            result = self.cursor.fetchone()
+            stats['total_revenue'] = result[0] if result[0] else 0.0
+            stats['total_profit'] = result[1] if result[1] else 0.0
 
             return stats
         except Exception as e:
@@ -543,20 +584,31 @@ class DatabaseManager:
         finally:
             self.disconnect()
 
-    def get_top_selling_products(self, limit=5):
+    def get_top_selling_products(self, limit=5, category_id=None):
         """Get top selling products"""
         if not self.connect():
             return []
 
         try:
-            self.cursor.execute('''
-                SELECT p.name, SUM(s.quantity) as total_quantity, SUM(s.revenue) as total_revenue
-                FROM sales s
-                JOIN products p ON s.product_id = p.id
-                GROUP BY p.id, p.name
-                ORDER BY total_quantity DESC
-                LIMIT ?
-            ''', (limit,))
+            if category_id:
+                self.cursor.execute('''
+                    SELECT p.name, SUM(s.quantity) as total_quantity, SUM(s.revenue) as total_revenue
+                    FROM sales s
+                    JOIN products p ON s.product_id = p.id
+                    WHERE p.category_id = ?
+                    GROUP BY p.id, p.name
+                    ORDER BY total_quantity DESC
+                    LIMIT ?
+                ''', (category_id, limit))
+            else:
+                self.cursor.execute('''
+                    SELECT p.name, SUM(s.quantity) as total_quantity, SUM(s.revenue) as total_revenue
+                    FROM sales s
+                    JOIN products p ON s.product_id = p.id
+                    GROUP BY p.id, p.name
+                    ORDER BY total_quantity DESC
+                    LIMIT ?
+                ''', (limit,))
 
             return self.cursor.fetchall()
         except Exception as e:
@@ -565,19 +617,30 @@ class DatabaseManager:
         finally:
             self.disconnect()
 
-    def get_profit_trend(self, days=30):
+    def get_profit_trend(self, days=30, category_id=None):
         """Get profit trend data"""
         if not self.connect():
             return []
 
         try:
-            self.cursor.execute('''
-                SELECT sale_date, SUM(profit) as daily_profit
-                FROM sales
-                WHERE sale_date >= date('now', '-{} days')
-                GROUP BY sale_date
-                ORDER BY sale_date
-            '''.format(days))
+            if category_id:
+                self.cursor.execute('''
+                    SELECT s.sale_date, SUM(s.profit) as daily_profit
+                    FROM sales s
+                    JOIN products p ON s.product_id = p.id
+                    WHERE s.sale_date >= date('now', '-{} days')
+                    AND p.category_id = ?
+                    GROUP BY s.sale_date
+                    ORDER BY s.sale_date
+                '''.format(days), (category_id,))
+            else:
+                self.cursor.execute('''
+                    SELECT sale_date, SUM(profit) as daily_profit
+                    FROM sales
+                    WHERE sale_date >= date('now', '-{} days')
+                    GROUP BY sale_date
+                    ORDER BY sale_date
+                '''.format(days))
 
             return self.cursor.fetchall()
         except Exception as e:

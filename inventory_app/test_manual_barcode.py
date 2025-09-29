@@ -64,7 +64,7 @@ def test_manual_barcode_lookup():
         print(f"   SKU: {sku or 'N/A'}")
         print(f"   Barcode: {barcode or 'N/A'}")
         print(f"   Category: {category_name}")
-        print(f"   COGS: ₹{cogs:.2f}")
+        print(f"   COGS: PKR {cogs:.2f}")
         print(f"   Stock: {current_stock} units")
         
         print("\n🎯 This is exactly what the barcode scanner will show!")

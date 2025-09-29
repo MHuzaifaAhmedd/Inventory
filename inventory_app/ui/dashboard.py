@@ -271,7 +271,7 @@ class DashboardFrame:
     def update_stats_cards(self, category_id=None):
         """Update statistics cards"""
         try:
-            stats = self.db_manager.get_dashboard_stats()
+            stats = self.db_manager.get_dashboard_stats(category_id)
 
             # Format values
             total_products = stats.get('total_products', 0)
@@ -282,8 +282,8 @@ class DashboardFrame:
             # Update card values
             self.stats_cards['total_products'].value_label.config(text=str(total_products))
             self.stats_cards['total_stock'].value_label.config(text=str(total_stock))
-            self.stats_cards['total_revenue'].value_label.config(text=f"₹{total_revenue:,.2f}")
-            self.stats_cards['total_profit'].value_label.config(text=f"₹{total_profit:,.2f}")
+            self.stats_cards['total_revenue'].value_label.config(text=f"PKR {total_revenue:,.2f}")
+            self.stats_cards['total_profit'].value_label.config(text=f"PKR {total_profit:,.2f}")
 
         except Exception as e:
             print(f"Error updating stats cards: {e}")
@@ -296,7 +296,7 @@ class DashboardFrame:
                 widget.destroy()
 
             # Get top products data
-            top_products = self.db_manager.get_top_selling_products(5)
+            top_products = self.db_manager.get_top_selling_products(5, category_id)
 
             if not top_products:
                 no_data_label = tk.Label(
@@ -349,7 +349,7 @@ class DashboardFrame:
                 widget.destroy()
 
             # Get profit trend data
-            profit_data = self.db_manager.get_profit_trend(30)
+            profit_data = self.db_manager.get_profit_trend(30, category_id)
 
             if not profit_data:
                 no_data_label = tk.Label(
@@ -374,7 +374,7 @@ class DashboardFrame:
             ax.plot(dates, profits, marker='o', color=self.primary_color,
                    linewidth=2, markersize=4)
             ax.set_xlabel('Date')
-            ax.set_ylabel('Profit (₹)')
+            ax.set_ylabel('Profit (PKR)')
             ax.set_title('Profit Trend (Last 30 Days)', fontsize=10, pad=10)
             ax.set_facecolor(self.secondary_color)
             ax.tick_params(axis='x', rotation=45, labelsize=8)

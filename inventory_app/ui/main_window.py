@@ -152,6 +152,29 @@ class MainWindow:
         if frame_name in self.frames:
             self.frames[frame_name].show()
 
+    def recreate_frames(self):
+        """Recreate all frames (used after DB reset)"""
+        # Destroy existing frame widgets if they exist
+        try:
+            for frame in self.frames.values():
+                try:
+                    frame.hide()
+                except Exception:
+                    pass
+                try:
+                    # Each frame class uses a Tk container attribute named 'frame'
+                    if hasattr(frame, 'frame'):
+                        frame.frame.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Recreate frames hooked to the current db_manager
+        self.create_frames()
+        # Show dashboard by default
+        self.show_frame("dashboard")
+
     def on_button_hover(self, event, button, enter):
         """Handle button hover effects"""
         if enter:

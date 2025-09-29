@@ -93,7 +93,7 @@ def test_barcode_generation_and_lookup():
         print(f"   SKU: {found_product[2]}")
         print(f"   Barcode: {found_product[3]}")
         print(f"   Category ID: {found_product[4]}")
-        print(f"   COGS: ₹{found_product[5]:.2f}")
+        print(f"   COGS: PKR {found_product[5]:.2f}")
         print(f"   Stock: {found_product[6]}")
     else:
         print("❌ Product NOT found by barcode")
