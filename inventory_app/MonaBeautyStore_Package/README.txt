@@ -33,4 +33,4 @@
 Contact your system administrator for technical support.
 
 ---
-© 2024 Mona Beauty Store - Inventory Management System
+© 2025 Mona Beauty Store - Inventory Management System

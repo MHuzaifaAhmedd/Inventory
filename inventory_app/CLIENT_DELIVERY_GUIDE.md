@@ -125,6 +125,6 @@ MonaBeautyStore_Package/
 
 ---
 
-**© 2024 Mona Beauty Store - Inventory Management System**
+**© 5 Mona Beauty Store - Inventory Management System**
 
  

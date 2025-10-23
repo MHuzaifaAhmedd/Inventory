@@ -17,14 +17,36 @@ class ProductionBuilder:
         self.dist_dir = self.project_dir / "dist"
         self.build_dir = self.project_dir / "build"
         self.spec_file = self.project_dir / "MonaBeautyStore.spec"
+        self.app_dir = self.dist_dir / "MonaBeautyStore_Inventory"
+        self.app_exe = self.app_dir / "MonaBeautyStore_Inventory.exe"
         
     def clean_build_dirs(self):
         """Clean previous build directories"""
         print("Cleaning previous build directories...")
+        from datetime import datetime
+        import stat
+
+        def _onerror(func, path, exc_info):
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception:
+                pass
+
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
-                shutil.rmtree(dir_path)
-                print(f"Removed {dir_path}")
+                try:
+                    shutil.rmtree(dir_path, onerror=_onerror)
+                    print(f"Removed {dir_path}")
+                except Exception:
+                    # Fallback: rename to release locks, delete later
+                    try:
+                        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        renamed = dir_path.with_name(dir_path.name + f"_old_{ts}")
+                        dir_path.rename(renamed)
+                        print(f"Renamed locked directory to {renamed}")
+                    except Exception as e:
+                        print(f"Warning: Could not remove or rename {dir_path}: {e}")
     
     def create_spec_file(self):
         """Create PyInstaller .spec file for advanced configuration"""
@@ -226,12 +248,38 @@ exe = EXE(
         """Build the executable using PyInstaller"""
         print("Building executable...")
         try:
+            # Ensure no running instance is locking files
+            try:
+                if self.app_exe.exists():
+                    print("Ensuring no running instance is locking dist...")
+                    # Best-effort terminate running process by name
+                    subprocess.run(["taskkill", "/IM", "MonaBeautyStore_Inventory.exe", "/F"], check=False)
+            except Exception:
+                pass
+
+            # Remove output app dir if exists to avoid lock issues inside PyInstaller collect step
+            if self.app_dir.exists():
+                print(f"Removing existing output: {self.app_dir}")
+                try:
+                    shutil.rmtree(self.app_dir)
+                except Exception:
+                    # Fallback to rename if locked
+                    try:
+                        from datetime import datetime
+                        renamed = self.app_dir.with_name(self.app_dir.name + "_old_" + datetime.now().strftime('%Y%m%d_%H%M%S'))
+                        self.app_dir.rename(renamed)
+                        print(f"Renamed locked output to: {renamed}")
+                    except Exception:
+                        pass
+
             # Use direct PyInstaller command instead of spec file
             cmd = [
                 sys.executable, "-m", "PyInstaller",
-                "--onefile",  # Single executable file
+                "--onedir",  # Faster startup than onefile (no unpack step)
                 "--windowed",  # No console window
                 "--name=MonaBeautyStore_Inventory",
+                "--noupx",  # Disable UPX compression to improve launch time
+                "--noconfirm",  # Remove existing output without asking
                 "--add-data=database;database",  # Include database folder
                 "--add-data=ui;ui",  # Include ui folder
                 "--add-data=utils;utils",  # Include utils folder
@@ -274,19 +322,19 @@ title Mona Beauty Store - Inventory Management System
 echo Starting Mona Beauty Store Inventory System...
 echo.
 
-REM Check if the executable exists
-if not exist "MonaBeautyStore_Inventory.exe" (
+REM Check if the executable exists (onedir build)
+if not exist "MonaBeautyStore_Inventory\\MonaBeautyStore_Inventory.exe" (
     echo ERROR: MonaBeautyStore_Inventory.exe not found!
-    echo Please make sure the executable is in the same folder as this script.
+    echo Please make sure the MonaBeautyStore_Inventory folder is in the same folder as this script.
     pause
     exit /b 1
 )
 
 REM Run the application
-start "" "MonaBeautyStore_Inventory.exe"
+start "" "MonaBeautyStore_Inventory\\MonaBeautyStore_Inventory.exe"
 
 REM Wait a moment and then close this window
-timeout /t 3 /nobreak >nul
+timeout /t 2 /nobreak >nul
 exit
 '''
         
@@ -332,7 +380,7 @@ exit
 Contact your system administrator for technical support.
 
 ---
-© 2024 Mona Beauty Store - Inventory Management System
+© 2025 Mona Beauty Store - Inventory Management System
 '''
         
         readme_path = self.dist_dir / "README.txt"
@@ -407,16 +455,16 @@ Contact your system administrator for technical support.
         package_dir = self.create_installer_package()
         
         # Step 7: Show results
-        exe_path = self.dist_dir / "MonaBeautyStore_Inventory.exe"
+        exe_path = self.dist_dir / "MonaBeautyStore_Inventory" / "MonaBeautyStore_Inventory.exe"
         if exe_path.exists():
             size_mb = exe_path.stat().st_size / (1024 * 1024)
-            print(f"\n✅ BUILD SUCCESSFUL!")
-            print(f"📁 Executable: {exe_path}")
-            print(f"📊 Size: {size_mb:.2f} MB")
-            print(f"📦 Package: {package_dir}")
-            print(f"\n🚀 Ready for delivery to client!")
+            print("\nBUILD SUCCESSFUL!")
+            print(f"Executable: {exe_path}")
+            print(f"Size: {size_mb:.2f} MB")
+            print(f"Package: {package_dir}")
+            print("\nReady for delivery to client.")
         else:
-            print("❌ Build failed - executable not found")
+            print("Build failed - executable not found")
             return False
         
         return True
